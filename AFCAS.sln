@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.12
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{04501170-F705-4985-A4FF-D0AC4C9ED7A8}"
+	ProjectSection(SolutionItems) = preProject
+		COPYING.LESSER.txt = COPYING.LESSER.txt
+		COPYING.txt = COPYING.txt
+		DB-Script.Sql-Server.sql = DB-Script.Sql-Server.sql
+		Interop.ActiveDs.dll = Interop.ActiveDs.dll
+		NUnit-license.txt = NUnit-license.txt
+		nunit.core.dll = nunit.core.dll
+		nunit.framework.dll = nunit.framework.dll
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AFCAS", "AFCAS\AFCAS.csproj", "{EFDBD4B5-F962-4391-903C-6EF541A803F6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ADSync", "ADSync\ADSync.csproj", "{4B3F29D0-BF47-4C47-9B54-50BAF260EC0E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EFDBD4B5-F962-4391-903C-6EF541A803F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFDBD4B5-F962-4391-903C-6EF541A803F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFDBD4B5-F962-4391-903C-6EF541A803F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFDBD4B5-F962-4391-903C-6EF541A803F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B3F29D0-BF47-4C47-9B54-50BAF260EC0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B3F29D0-BF47-4C47-9B54-50BAF260EC0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B3F29D0-BF47-4C47-9B54-50BAF260EC0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B3F29D0-BF47-4C47-9B54-50BAF260EC0E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4CA95E7F-EA27-4ACD-8001-403684188A2A}
+	EndGlobalSection
+EndGlobal
