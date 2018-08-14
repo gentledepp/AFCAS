@@ -294,7 +294,7 @@ namespace Afcas.Test
             await Task.Delay(250);
             manager.RemoveAccessPredicate(G.Key, O.Key, R, ResourceAccessPredicateType.Grant);
 
-            var rows2 = GetAuthRows().Where(r => r.PrincipalId == "U1" && r.ResourceId == R21.AfcasKey).ToList();
+            var rows2 = GetAuthRows().Where(r => r.PrincipalId == "U1" && r.ResourceId == R21.AfcasKey && r.Deleted == new DateTime(1753,01,01,0,0,0,DateTimeKind.Utc)).ToList();
             var deletedRows = GetDeletedAuthRows(lastChange).Where(r => r.PrincipalId == "U1" && r.ResourceId == R21.AfcasKey).ToList();
             var dr = GetDeletedAuthRows();
 
@@ -313,13 +313,13 @@ namespace Afcas.Test
         PL.StartVertex AS PrincipalId
        ,ACL.OperationId
        ,RL.StartVertex AS ResourceId
-	   ,case when PL.Modified > RL.Modified then PL.Modified else RL.Modified end as Modified
-	   ,case when (PL.Deleted is not null and rl.Deleted is null) or (PL.Deleted > RL.Deleted) then PL.Deleted else RL.Deleted end as Deleted
+	   , (SELECT Max(v) FROM (VALUES (PL.Modified), (rl.Modified), (ACL.Modified)) AS value(v)) as Modified
+	   , (SELECT Max(v) FROM (VALUES (PL.Deleted), (rl.Deleted), (ACL.Deleted)) AS value(v)) as Deleted
 	FROM ( SELECT E.EndVertex, E.StartVertex, E.Modified, E.Deleted
             FROM Edge E
                 INNER JOIN AccessPredicate AP
                    ON E.EndVertex = AP.PrincipalId
-                WHERE E.Source = 'Principal' and E.Deleted is null
+                WHERE E.Source = 'Principal' and E.Deleted  = '1753-01-01'
             UNION 
             SELECT PrincipalId, PrincipalId, Modified, Deleted
             FROM AccessPredicate) PL
@@ -328,7 +328,7 @@ namespace Afcas.Test
                 FROM Edge E
                     INNER JOIN AccessPredicate AP
                        ON E.EndVertex = AP.ResourceId
-                WHERE E.Source = 'Resource'  and E.Deleted is null
+                WHERE E.Source = 'Resource'  and E.Deleted  = '1753-01-01'
                 UNION 
                 SELECT ResourceId, ResourceId, Modified, Deleted
                 FROM AccessPredicate) RL
@@ -347,13 +347,13 @@ namespace Afcas.Test
         PL.StartVertex AS PrincipalId
        ,ACL.OperationId
        ,RL.StartVertex AS ResourceId
-	   ,case when PL.Modified > RL.Modified then PL.Modified else RL.Modified end as Modified
-	   ,case when (PL.Deleted is not null and rl.Deleted is null) or (PL.Deleted > RL.Deleted) then PL.Deleted else RL.Deleted end as Deleted
+	   , (SELECT Max(v) FROM (VALUES (PL.Modified), (rl.Modified), (ACL.Modified)) AS value(v)) as Modified
+	   , (SELECT Max(v) FROM (VALUES (PL.Deleted), (rl.Deleted), (ACL.Deleted)) AS value(v)) as Deleted
 	FROM ( SELECT E.EndVertex, E.StartVertex, E.Modified, E.Deleted
             FROM Edge E
                 INNER JOIN AccessPredicate AP
                    ON E.EndVertex = AP.PrincipalId
-                WHERE E.Source = 'Principal' and E.Deleted is null
+                WHERE E.Source = 'Principal' and E.Deleted = '1753-01-01'
             UNION 
             SELECT PrincipalId, PrincipalId, Modified, Deleted
             FROM AccessPredicate) PL
@@ -362,15 +362,15 @@ namespace Afcas.Test
                 FROM Edge E
                     INNER JOIN AccessPredicate AP
                        ON E.EndVertex = AP.ResourceId
-                WHERE E.Source = 'Resource'  and E.Deleted is null
+                WHERE E.Source = 'Resource'  and E.Deleted  = '1753-01-01'
                 UNION 
                 SELECT ResourceId, ResourceId, Modified, Deleted
                 FROM AccessPredicate) RL
             INNER JOIN AccessPredicate ACL 
                ON PL.EndVertex = ACL.PrincipalId
               AND RL.EndVertex = ACL.ResourceId
-            WHERE PL.Modified > @modified or RL.Modified > @modified
-                  or PL.Deleted > @modified or RL.Deleted > @modified", new { modified = max });
+            WHERE PL.Modified > @modified or RL.Modified > @modified or ACL.Modified > @modified
+                  or PL.Deleted > @modified or RL.Deleted > @modified or ACL.Deleted > @modified" , new { modified = max });
             });
             return rows2;
         }
@@ -383,8 +383,8 @@ namespace Afcas.Test
         PL.StartVertex AS PrincipalId
        ,ACL.OperationId
        ,RL.StartVertex AS ResourceId
-	   ,case when PL.Modified > RL.Modified then PL.Modified else RL.Modified end as Modified
-	   ,case when (PL.Deleted is not null and rl.Deleted is null) or (PL.Deleted > RL.Deleted) then PL.Deleted else RL.Deleted end as Deleted
+	   , (SELECT Max(v) FROM (VALUES (PL.Modified), (rl.Modified), (ACL.Modified)) AS value(v)) as Modified
+	   , (SELECT Max(v) FROM (VALUES (PL.Deleted), (rl.Deleted), (ACL.Deleted)) AS value(v)) as Deleted
 	FROM ( SELECT E.EndVertex, E.StartVertex, E.Modified, E.Deleted
             FROM Edge E
                 INNER JOIN AccessPredicate AP
@@ -405,7 +405,7 @@ namespace Afcas.Test
             INNER JOIN AccessPredicate ACL 
                ON PL.EndVertex = ACL.PrincipalId
               AND RL.EndVertex = ACL.ResourceId
-                where PL.Deleted is not null or RL.Deleted is not null");
+                where PL.Deleted is not null or RL.Deleted is not null or ACL.Deleted is not null");
             });
             return rows;
         }
@@ -418,8 +418,8 @@ namespace Afcas.Test
         PL.StartVertex AS PrincipalId
        ,ACL.OperationId
        ,RL.StartVertex AS ResourceId
-	   ,case when PL.Modified > RL.Modified then PL.Modified else RL.Modified end as Modified
-	   ,case when (PL.Deleted is not null and rl.Deleted is null) or (PL.Deleted > RL.Deleted) then PL.Deleted else RL.Deleted end as Deleted
+	   , (SELECT Max(v) FROM (VALUES (PL.Modified), (rl.Modified), (ACL.Modified)) AS value(v)) as Modified
+	   , (SELECT Max(v) FROM (VALUES (PL.Deleted), (rl.Deleted), (ACL.Deleted)) AS value(v)) as Deleted
 	FROM ( SELECT E.EndVertex, E.StartVertex, E.Modified, E.Deleted
             FROM Edge E
                 INNER JOIN AccessPredicate AP
@@ -440,8 +440,8 @@ namespace Afcas.Test
             INNER JOIN AccessPredicate ACL 
                ON PL.EndVertex = ACL.PrincipalId
               AND RL.EndVertex = ACL.ResourceId
-            WHERE (PL.Deleted is not null or RL.Deleted is not null)
-                  and (PL.Deleted > @modified or RL.Deleted > @modified)", new { modified = max });
+            WHERE (PL.Deleted is not null or RL.Deleted is not null or ACL.Deleted is not null)
+                  and (PL.Deleted > @modified or RL.Deleted > @modified or ACL.Deleted > @modified)", new { modified = max });
             });
             return rows;
         }

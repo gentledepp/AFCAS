@@ -18,6 +18,7 @@
 
 
 using System;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -531,7 +532,7 @@ t.Name
 
         private ObjectCache SetupHugeTestData()
         {
-            DBHelper.ExecuteNonQuery("Test_DeleteAllData");
+            //DBHelper.ExecuteNonQuery("Test_DeleteAllData");
             ObjectCache.PushCurrent(new ObjectCache());
 
             IAuthorizationManager manager = Afcas.GetAuthorizationManager();
@@ -638,61 +639,97 @@ t.Name
             int customerCount = 5;
             int deviceCount = 250000;
 
-            using(Track($"Creating 50 customers "))
+            var edges = new List<(string start,string end)>();
+
+            using (Track($"Creating 50 customers "))
             for (int i = 0; i < customerCount; i++)
             {
-                var customer = resFac.GenerateResourceHandleByKey($"customer {i+1}");
+                var customer = resFac.GenerateResourceHandleByKey($"x customer {i+1}");
+                customers.Add(customer);
 
-                    // create equipments per customer
+                // create equipments per customer
                 using (Track($"\tCreating {deviceCount} device for {customer.Key} "))
                 {
-                    for (int j = 0; j < deviceCount / 3; j++)
+                    for (int j = 0; j < deviceCount / 10; j++)
                     {
-                        var device = resFac.GenerateResourceHandleByKey($"device {j + 1} ({customer.Key})");
-                        manager.AddSubResource(customer, device);
+                        var device = resFac.GenerateResourceHandleByKey($"device {j+1} ({customer.Key})");
+                        //manager.AddSubResource(customer, device);
+                        edges.Add((customer.AfcasKey, device.AfcasKey));
+                        for (int k = 0; k < 10; k++)
+                        {
 
-                        var subDevice = resFac.GenerateResourceHandleByKey($"subdevice {j + 1} of {device.Key} ({customer.Key})");
-                        manager.AddSubResource(device, subDevice);
-                            
-                        var subSubDevice = resFac.GenerateResourceHandleByKey($"subSubdevice {j + 1} of {subDevice.Key} ({customer.Key})");
-                        manager.AddSubResource(subDevice, subSubDevice);
+                            var subDevice = resFac.GenerateResourceHandleByKey($"device {j+1}.{k+1} ({customer.Key})");
+                            //manager.AddSubResource(device, subDevice);
+                            edges.Add((device.AfcasKey, subDevice.AfcasKey));
+                            device = subDevice;
+                        }
                     }
                 }
             }
 
-            // create messmittel
-            Console.WriteLine(" ");
-            using (Track($"Creating 300 messmittel "))
-            for (int i = 0; i < 3000; i++)
-            {
-                var measurementDevice = resFac.GenerateResourceHandleByKey($"messgerät {i + 1}");
-
-                manager.AddAccessPredicate(PI.Key, OH.Key, measurementDevice, ResourceAccessPredicateType.Grant);
-                manager.AddAccessPredicate(PD.Key, OA.Key, measurementDevice, ResourceAccessPredicateType.Grant);
-                manager.AddAccessPredicate(PP.Key, OE.Key, measurementDevice, ResourceAccessPredicateType.Grant);
-
-                manager.AddAccessPredicate(PA.Key, OG.Key, measurementDevice, ResourceAccessPredicateType.Grant);
-                manager.AddAccessPredicate(PQ.Key, OB.Key, measurementDevice, ResourceAccessPredicateType.Grant);
-                manager.AddAccessPredicate(PF.Key, OC.Key, measurementDevice, ResourceAccessPredicateType.Grant);
-            }
 
 
             // six permissions per customer
             Console.WriteLine(" ");
             using (Track($"Adding permissions to customers "))
-            foreach (var customer in customers)
-            {
-                using (Track($"\tAdding permissions on customer {customer.Key} "))
+                foreach (var customer in customers)
                 {
-                    manager.AddAccessPredicate(PI.Key, OH.Key, customer, ResourceAccessPredicateType.Grant);
-                    manager.AddAccessPredicate(PD.Key, OA.Key, customer, ResourceAccessPredicateType.Grant);
-                    manager.AddAccessPredicate(PP.Key, OE.Key, customer, ResourceAccessPredicateType.Grant);
+                    using (Track($"\tAdding permissions on customer {customer.Key} "))
+                    {
+                        manager.AddAccessPredicate(PI.Key, OH.Key, customer, ResourceAccessPredicateType.Grant);
+                        manager.AddAccessPredicate(PD.Key, OA.Key, customer, ResourceAccessPredicateType.Grant);
+                        manager.AddAccessPredicate(PP.Key, OE.Key, customer, ResourceAccessPredicateType.Grant);
 
-                    manager.AddAccessPredicate(PA.Key, OG.Key, customer, ResourceAccessPredicateType.Grant);
-                    manager.AddAccessPredicate(PQ.Key, OB.Key, customer, ResourceAccessPredicateType.Grant);
-                    manager.AddAccessPredicate(PF.Key, OC.Key, customer, ResourceAccessPredicateType.Grant);
+                        manager.AddAccessPredicate(PA.Key, OG.Key, customer, ResourceAccessPredicateType.Grant);
+                        manager.AddAccessPredicate(PQ.Key, OB.Key, customer, ResourceAccessPredicateType.Grant);
+                        manager.AddAccessPredicate(PF.Key, OC.Key, customer, ResourceAccessPredicateType.Grant);
+                    }
                 }
+
+
+
+            var chunks = edges.ToChunks(500).Select(tuples =>
+            {
+                var d = new DataTable();
+                d.Columns.Add("StartVertexId", typeof(string));
+                d.Columns.Add("EndVertexId", typeof(string));
+                d.Columns.Add("Source", typeof(string));
+                foreach (var r in tuples)
+                    d.Rows.Add(r.start, r.end, EdgeSource.Resource);
+                return d;
+            });
+
+            // bulk insert edges
+            using (Track($"Adding Edges"))
+            foreach (var chunk in chunks)
+            {
+                DBHelper.RunInTransaction(conn =>
+                {
+                    conn.Execute("dbo.AddEdgesWithSpaceSaving", new { TVP = chunk.AsTableValuedParameter("dbo.AddEdges") },
+                        commandType: CommandType.StoredProcedure);
+                });
             }
+            //DBHelper.RunInTransaction(conn =>
+            //{
+            //    conn.Execute("dbo.AddEdgesWithSpaceSaving", new { TVP = edges.AsTableValuedParameter("dbo.AddEdges") },
+            //        commandType: CommandType.StoredProcedure);
+            //});
+
+            //// create messmittel
+            //Console.WriteLine(" ");
+            //using (Track($"Creating 300 messmittel "))
+            //for (int i = 0; i < 3000; i++)
+            //{
+            //    var measurementDevice = resFac.GenerateResourceHandleByKey($"messgerät {i + 1}");
+
+            //    manager.AddAccessPredicate(PI.Key, OH.Key, measurementDevice, ResourceAccessPredicateType.Grant);
+            //    manager.AddAccessPredicate(PD.Key, OA.Key, measurementDevice, ResourceAccessPredicateType.Grant);
+            //    manager.AddAccessPredicate(PP.Key, OE.Key, measurementDevice, ResourceAccessPredicateType.Grant);
+
+            //    manager.AddAccessPredicate(PA.Key, OG.Key, measurementDevice, ResourceAccessPredicateType.Grant);
+            //    manager.AddAccessPredicate(PQ.Key, OB.Key, measurementDevice, ResourceAccessPredicateType.Grant);
+            //    manager.AddAccessPredicate(PF.Key, OC.Key, measurementDevice, ResourceAccessPredicateType.Grant);
+            //}
             return ObjectCache.Current;
         }
 
@@ -717,6 +754,22 @@ t.Name
             {
                 _sw.Stop();
                 Console.WriteLine($"{_name} took {_sw.Elapsed}");
+            }
+        }
+    }
+
+    public static class ExtMethods
+    {
+        public static IEnumerable<IEnumerable<T>> ToChunks<T>(this IEnumerable<T> enumerable, int chunkSize)
+        {
+            int itemsReturned = 0;
+            var list = enumerable.ToList(); // Prevent multiple execution of IEnumerable.
+            int count = list.Count;
+            while (itemsReturned < count)
+            {
+                int currentChunkSize = Math.Min(chunkSize, count - itemsReturned);
+                yield return list.GetRange(itemsReturned, currentChunkSize);
+                itemsReturned += currentChunkSize;
             }
         }
     }
